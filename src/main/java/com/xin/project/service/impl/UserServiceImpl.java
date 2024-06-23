@@ -1,9 +1,11 @@
 package com.xin.project.service.impl;
 
 import cn.hutool.core.bean.BeanUtil;
+import cn.hutool.core.lang.UUID;
 import cn.hutool.core.util.RandomUtil;
 import cn.hutool.crypto.digest.DigestUtil;
 import cn.hutool.json.JSONUtil;
+import com.alibaba.nacos.common.utils.UuidUtils;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.xin.project.common.IdRequest;
@@ -109,7 +111,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
             user.setUserAvatar(USER_AVATAR);
             boolean saveResult = this.save(user);
             if (!saveResult) {
-                throw new BusinessException(ErrorCode.SYSTEM_ERROR, "注册失败，数据库错误");
+                throw new BusinessException(ErrorCode.SYSTEM_ERROR, "注册失败");
             }
             return user.getId();
         }
@@ -133,29 +135,28 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         QueryWrapper<User> queryWrapper = new QueryWrapper<>();
         queryWrapper.eq("userAccount", userAccount);
         queryWrapper.eq("userPassword", encryptPassword);
+        UUID uuid = UUID.fastUUID();
+        String newToken = uuid.toString(true);
         User user = userMapper.selectOne(queryWrapper);
-
         // 用户不存在
         if (user == null) {
             log.info("user login failed, userAccount cannot match userPassword");
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "用户不存在或密码错误");
         }
-        return setLoginUser(response,user);
+        user.setToken(newToken);
+        return setLoginUser(user,newToken);
     }
 
     /**
      * 设置用户登录态
-     * @param response
      * @param user
      * @return
      */
-    private UserVO setLoginUser(HttpServletResponse response, User user) {
-        String token = JwtUtils.getJwtToken(user.getId(), user.getUserName());
-        Cookie cookie = new Cookie("token", token);
-        cookie.setPath("/");
-        response.addCookie(cookie);
+    private UserVO setLoginUser(User user,String token) {
+        String userToken = JwtUtils.getJwtToken(user.getId(), user.getUserName());
         String userJson = getUserJson(user);
         stringRedisTemplate.opsForValue().set(UserConstant.USER_LOGIN_STATE + user.getId(), userJson, JwtUtils.EXPIRE, TimeUnit.MILLISECONDS);
+        stringRedisTemplate.opsForValue().set(UserConstant.USER_LOGIN_TOKEN + token, userToken, JwtUtils.EXPIRE, TimeUnit.MILLISECONDS);
         return this.getUserVO(user);
     }
 
@@ -182,11 +183,18 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
      */
     @Override
     public User getLoginUser(HttpServletRequest request) {
-        // 先判断是否已登录
-        Long userId = JwtUtils.getUserIdByToken(request);
-        if (userId == null) {
+        String token = request.getHeader("token");
+        if (token == null){
             throw new BusinessException(ErrorCode.NOT_LOGIN_ERROR);
         }
+        String jwtToken = stringRedisTemplate.opsForValue().get(UserConstant.USER_LOGIN_TOKEN + token);
+        if (jwtToken == null){
+            throw new BusinessException(ErrorCode.NOT_LOGIN_ERROR);
+        }
+        if (!JwtUtils.checkToken(jwtToken)){
+            throw new BusinessException(ErrorCode.NOT_LOGIN_ERROR,"登录过期");
+        }
+        Long userId = JwtUtils.getUserIdByToken(jwtToken);
         String userStr = stringRedisTemplate.opsForValue().get(UserConstant.USER_LOGIN_STATE + userId);
         if (userStr == null) {
             throw new BusinessException(ErrorCode.NOT_LOGIN_ERROR);
@@ -214,22 +222,16 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
      * @param request
      */
     @Override
-public boolean userLogout(HttpServletRequest request, HttpServletResponse response) {
-    Cookie[] cookies = request.getCookies();
-    for (Cookie cookie : cookies) {
-        if ("token".equals(cookie.getName())) {
-            Long userId = JwtUtils.getUserIdByToken(request);
-            Boolean delete = stringRedisTemplate.delete(UserConstant.USER_LOGIN_STATE + userId);
-            if (!Boolean.TRUE.equals(delete)){
-                throw new BusinessException(ErrorCode.OPERATION_ERROR, "Failed to delete login state from Redis");
-            }
-            Cookie expiredCookie = new Cookie(cookie.getName(), cookie.getValue());
-            expiredCookie.setMaxAge(0);
-            response.addCookie(expiredCookie);
-            return true;
+    public boolean userLogout(HttpServletRequest request, HttpServletResponse response) {
+        String token = request.getHeader("token");
+        String jwtToken = stringRedisTemplate.opsForValue().get(UserConstant.USER_LOGIN_TOKEN + token);
+        Long userId= JwtUtils.getUserIdByToken(jwtToken);
+        Boolean deleteUser = stringRedisTemplate.delete(UserConstant.USER_LOGIN_STATE + userId);
+        Boolean deleteJwtToken = stringRedisTemplate.delete(UserConstant.USER_LOGIN_TOKEN + token);
+        if (Boolean.TRUE.equals(deleteJwtToken) && Boolean.TRUE.equals(deleteUser)){
+            throw new BusinessException(ErrorCode.OPERATION_ERROR, "Failed to delete login state from Redis");
         }
-    }
-    throw new BusinessException(ErrorCode.OPERATION_ERROR, "User is not logged in");
+        return true;
 }
 
 
@@ -275,7 +277,7 @@ public boolean userLogout(HttpServletRequest request, HttpServletResponse respon
                 return b1;
             }
         } catch (InterruptedException e) {
-            log.error("" + e);
+            log.error(" " + e);
         } finally {
             lock.unlock();
         }

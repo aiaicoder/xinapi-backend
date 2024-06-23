@@ -1,21 +1,19 @@
 package com.xin.project.controller;
 
-import cn.hutool.core.bean.BeanUtil;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.plugins.pagination.PageDTO;
 import com.xin.project.annotation.AuthCheck;
+import com.xin.project.common.*;
+import com.xin.project.exception.BusinessException;
 import com.xin.project.model.dto.user.*;
 import com.xin.project.model.vo.UserInvokeKeyVO;
 import com.xin.project.model.vo.UserVO;
-import com.xin.project.common.*;
-import com.xin.project.exception.BusinessException;
 import com.xin.project.service.UserService;
 import com.xin.project.utils.FileUploadUtil;
 import com.xin.xincommon.entity.User;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.BeanUtils;
-import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 

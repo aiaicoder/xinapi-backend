@@ -73,24 +73,16 @@ public class JwtUtils {
 
     /**
      * 根据token字符串获取token字符串中有效载荷部分的数据(有效载荷部分包含用户的数据)
-     * @param request
+     * @param
      * @return
      */
-    public static Long getUserIdByToken(HttpServletRequest request) {
-        Cookie[] cookies = request.getCookies();
-        for (Cookie cookie : cookies) {
-            if (cookie.getName().equals("token")){
-                String token = cookie.getValue();
-                if (!StringUtils.isEmpty(token)){
-                    try {
-                        Jws<Claims> claimsJws = Jwts.parser().setSigningKey(APP_SECRET).parseClaimsJws(token);
-                        Claims claims = claimsJws.getBody();
-                        return Long.parseLong(claims.get("id").toString());
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                    }
-                }
-            }
+    public static Long getUserIdByToken(String jwtToken) {
+        try {
+            Jws<Claims> claimsJws = Jwts.parser().setSigningKey(APP_SECRET).parseClaimsJws(jwtToken);
+            Claims claims = claimsJws.getBody();
+            return Long.parseLong(claims.get("id").toString());
+        } catch (Exception e) {
+            e.printStackTrace();
         }
         return null;
     }

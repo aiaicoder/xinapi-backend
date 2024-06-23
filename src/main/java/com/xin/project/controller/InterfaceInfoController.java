@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.google.gson.Gson;
 import com.xin.project.annotation.AuthCheck;
+import com.xin.project.annotation.GlobalInterceptor;
 import com.xin.project.model.dto.interfaceinfo.InterfaceInfoInvokeRequest;
 import com.xin.project.common.*;
 import com.xin.project.constant.CommonConstant;
@@ -58,9 +59,9 @@ public class InterfaceInfoController {
      * @param request
      * @return
      */
-    @AuthCheck(mustRole = "admin")
+    @GlobalInterceptor(checkAdmin = true)
     @PostMapping("/add")
-    public BaseResponse<Long> addinterfaceInfo(@RequestBody InterfaceInfoAddRequest interfaceInfoAddRequest, HttpServletRequest request) {
+    public BaseResponse<Long> addInterfaceInfo(@RequestBody InterfaceInfoAddRequest interfaceInfoAddRequest, HttpServletRequest request) {
         if (interfaceInfoAddRequest == null) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR);
         }
@@ -74,8 +75,8 @@ public class InterfaceInfoController {
         if (!result) {
             throw new BusinessException(ErrorCode.OPERATION_ERROR);
         }
-        long newinterfaceInfoId = interfaceInfo.getId();
-        return ResultUtils.success(newinterfaceInfoId);
+        long newInterfaceInfoId = interfaceInfo.getId();
+        return ResultUtils.success(newInterfaceInfoId);
     }
 
     /**
@@ -85,9 +86,10 @@ public class InterfaceInfoController {
      * @param request
      * @return
      */
-    @AuthCheck(mustRole = "admin")
+
     @PostMapping("/delete")
-    public BaseResponse<Boolean> deleteinterfaceInfo(@RequestBody DeleteRequest deleteRequest, HttpServletRequest request) {
+    @GlobalInterceptor(checkAdmin = true)
+    public BaseResponse<Boolean> deleteInterfaceInfo(@RequestBody DeleteRequest deleteRequest, HttpServletRequest request) {
         if (deleteRequest == null || deleteRequest.getId() <= 0) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR);
         }
@@ -110,9 +112,9 @@ public class InterfaceInfoController {
      * @param request
      * @return
      */
-    @AuthCheck(mustRole = "admin")
+    @GlobalInterceptor(checkAdmin = true)
     @PostMapping("/update")
-    public BaseResponse<Boolean> updateinterfaceInfo(@RequestBody InterfaceInfoUpdateRequest interfaceInfoUpdateRequest,
+    public BaseResponse<Boolean> updateInterfaceInfo(@RequestBody InterfaceInfoUpdateRequest interfaceInfoUpdateRequest,
                                             HttpServletRequest request) {
         if (interfaceInfoUpdateRequest == null || interfaceInfoUpdateRequest.getId() <= 0) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR);
@@ -140,7 +142,7 @@ public class InterfaceInfoController {
      * @return
      */
     @GetMapping("/get")
-    public BaseResponse<InterfaceInfoVo> getinterfaceInfoById(long id,HttpServletRequest request) {
+    public BaseResponse<InterfaceInfoVo> getInterfaceInfoById(long id,HttpServletRequest request) {
         if (id <= 0) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR);
         }
@@ -171,9 +173,9 @@ public class InterfaceInfoController {
      * @param interfaceInfoQueryRequest
      * @return
      */
-    @AuthCheck(mustRole = "admin")
+    @GlobalInterceptor
     @GetMapping("/list")
-    public BaseResponse<List<InterfaceInfo>> listinterfaceInfo(InterfaceInfoQueryRequest interfaceInfoQueryRequest) {
+    public BaseResponse<List<InterfaceInfo>> listInterfaceInfo(InterfaceInfoQueryRequest interfaceInfoQueryRequest) {
         InterfaceInfo interfaceInfoQuery = new InterfaceInfo();
         if (interfaceInfoQueryRequest != null) {
             BeanUtils.copyProperties(interfaceInfoQueryRequest, interfaceInfoQuery);
@@ -191,7 +193,7 @@ public class InterfaceInfoController {
      * @return
      */
     @GetMapping("/list/page")
-    public BaseResponse<Page<InterfaceInfo>> listinterfaceInfoByPage(InterfaceInfoQueryRequest interfaceInfoQueryRequest, HttpServletRequest request) {
+    public BaseResponse<Page<InterfaceInfo>> listInterfaceInfoByPage(InterfaceInfoQueryRequest interfaceInfoQueryRequest, HttpServletRequest request) {
         if (interfaceInfoQueryRequest == null) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR);
         }
@@ -226,9 +228,9 @@ public class InterfaceInfoController {
      * @param request
      * @return
      */
-    @AuthCheck(mustRole = "admin")
+    @GlobalInterceptor
     @PostMapping("/online")
-    public BaseResponse<Boolean> OnlineInterfaceInfo(@RequestBody IdRequest idRequest,
+    public BaseResponse<Boolean> onlineInterfaceInfo(@RequestBody IdRequest idRequest,
                                                      HttpServletRequest request) {
         if (idRequest == null || idRequest.getId() <= 0) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR);
@@ -266,7 +268,7 @@ public class InterfaceInfoController {
      * @param request
      * @return
      */
-    @AuthCheck(mustRole = "admin")
+    @GlobalInterceptor(checkAdmin = true)
     @PostMapping("/offline")
     public BaseResponse<Boolean> offlineInterfaceInfo(@RequestBody IdRequest idRequest,
                                                      HttpServletRequest request) {
@@ -295,8 +297,9 @@ public class InterfaceInfoController {
      * @return 返回调用结果
      */
     @PostMapping("/invoke")
-    public BaseResponse<Object> InvokeInterfaceInfo(@RequestBody InterfaceInfoInvokeRequest interfaceInfoInvokeRequest,
-                                                     HttpServletRequest request) {
+    @GlobalInterceptor
+    public BaseResponse<Object> invokeInterfaceInfo(@RequestBody InterfaceInfoInvokeRequest interfaceInfoInvokeRequest,
+                                                    HttpServletRequest request) {
         // 检查参数是否为空或ID是否有效
         if (interfaceInfoInvokeRequest == null || interfaceInfoInvokeRequest.getId() <= 0) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR);
